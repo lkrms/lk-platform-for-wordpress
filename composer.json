@@ -1,0 +1,14 @@
+{
+    "name": "lkrms/lk-platform-for-wordpress",
+    "type": "wordpress-plugin",
+    "license": "MIT",
+    "description": "lk-platform integration for WordPress",
+    "require": {
+        "composer/installers": "~1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Lkrms\\Wp\\": "src/"
+        }
+    }
+}
