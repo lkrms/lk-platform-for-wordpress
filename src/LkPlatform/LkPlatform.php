@@ -7,6 +7,11 @@ namespace Lkrms\Wp\LkPlatform;
 use UnexpectedValueException;
 use WP_User;
 
+if (!defined('ABSPATH'))
+{
+    exit;
+}
+
 class LkPlatform
 {
     /**

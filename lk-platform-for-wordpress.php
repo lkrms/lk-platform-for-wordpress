@@ -14,7 +14,30 @@
 
 use Lkrms\Wp\LkPlatform\LkPlatform;
 
-require __DIR__ . '/vendor/autoload.php';
+if (!defined('ABSPATH'))
+{
+    exit;
+}
+
+if (file_exists(__DIR__ . '/vendor/autoload.php'))
+{
+    require __DIR__ . '/vendor/autoload.php';
+}
+else
+{
+    spl_autoload_register(function ($class)
+    {
+        if (preg_match('#^Lkrms/Wp(/LkPlatform(/.+)?)$#', strtr($class, '\\', '/'), $matches))
+        {
+            $file = __DIR__ . '/src' . $matches[1] . '.php';
+
+            if (file_exists($file))
+            {
+                include ($file);
+            }
+        }
+    }, true);
+}
 
 define('LKWP_FILE', __FILE__);
 
