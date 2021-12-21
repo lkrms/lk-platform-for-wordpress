@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Lkrms\Wp\LkPlatform;
 
+use UnexpectedValueException;
 use WP_User;
 
 class LkPlatform
@@ -76,34 +77,35 @@ class LkPlatform
         }
     }
 
-    public function GetUser($user): WP_User
+    public function GetUser($user = null): WP_User
     {
-        if ($user instanceof WP_User)
+        if (is_null($user))
+        {
+            return wp_get_current_user();
+        }
+        elseif ($user instanceof WP_User)
         {
             return $user;
         }
 
-        return get_userdata($user);
-    }
+        $user = get_userdata($user);
 
-    public function UserIsVendor(WP_User $user = null): bool
-    {
-        if (is_null($user))
+        if (false === $user)
         {
-            $user = wp_get_current_user();
+            throw new UnexpectedValueException("User not found");
         }
 
-        return (bool)preg_match(LKWP_VENDOR_EMAIL_REGEX, $user->user_email);
+        return $user;
     }
 
-    public function UserHasRole(string $role, WP_User $user = null): bool
+    public function UserIsVendor($user = null): bool
     {
-        if (is_null($user))
-        {
-            $user = wp_get_current_user();
-        }
+        return (bool)preg_match(LKWP_VENDOR_EMAIL_REGEX, $this->GetUser($user)->user_email);
+    }
 
-        return in_array($role, $user->roles);
+    public function UserHasRole(string $role, $user = null): bool
+    {
+        return in_array($role, $this->GetUser($user)->roles);
     }
 
     public function IgnoreCronJobs()
@@ -178,19 +180,25 @@ class LkPlatform
 
     public function _RedirectSwitchToUser_Action($user_id)
     {
-        if ($this->UserHasRole('administrator', $this->GetUser($user_id)))
+        // User Switching redirects to admin_url() if the user's capabilities
+        // include 'read'. WooCommerce customers have this but can't access
+        // wp-admin, so only redirect there if switching to an admin user
+        if ($this->UserHasRole('administrator', $user_id))
         {
             $this->NextLoginRedirect = admin_url();
         }
-        else
+        elseif (class_exists('woocommerce'))
         {
-            $this->NextLoginRedirect = home_url();
+            $pageId = get_option('woocommerce_myaccount_page_id');
+            $this->NextLoginRedirect = false !== $pageId ? get_permalink($pageId) : null;
         }
+
+        $this->NextLoginRedirect = $this->NextLoginRedirect ?: home_url();
     }
 
     public function _RedirectSwitchBackUser_Action($user_id, $old_user_id)
     {
-        $user = $this->GetUser($old_user_id);
+        $user = get_userdata($old_user_id);
         $this->NextLoginRedirect = self_admin_url("users.php" .
             ($user && $user->display_name ? "?s=" . urlencode($user->display_name) : ""));
     }
