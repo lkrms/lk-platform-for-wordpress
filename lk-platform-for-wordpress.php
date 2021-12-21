@@ -9,7 +9,7 @@
  * License:         MIT
  * Text Domain:     lk-platform-for-wordpress
  * Domain Path:     /languages
- * Version:         0.1.0
+ * Version:         0.1.1
  */
 
 use Lkrms\Wp\LkPlatform\LkPlatform;
