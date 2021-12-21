@@ -28,6 +28,16 @@ class LkPlatform
      */
     private $UserSwitchingLimited = false;
 
+    /**
+     * @var bool
+     */
+    private $UserSwitchRedirected = false;
+
+    /**
+     * @var string
+     */
+    private $NextLoginRedirect;
+
     private function __construct()
     {
     }
@@ -61,8 +71,19 @@ class LkPlatform
             if (is_plugin_active('user-switching/user-switching.php'))
             {
                 $this->LimitUserSwitching();
+                $this->RedirectUserSwitch();
             }
         }
+    }
+
+    public function GetUser($user): WP_User
+    {
+        if ($user instanceof WP_User)
+        {
+            return $user;
+        }
+
+        return get_userdata($user);
     }
 
     public function UserIsVendor(WP_User $user = null): bool
@@ -72,7 +93,17 @@ class LkPlatform
             $user = wp_get_current_user();
         }
 
-        return preg_match(LKWP_VENDOR_EMAIL_REGEX, $user->user_email);
+        return (bool)preg_match(LKWP_VENDOR_EMAIL_REGEX, $user->user_email);
+    }
+
+    public function UserHasRole(string $role, WP_User $user = null): bool
+    {
+        if (is_null($user))
+        {
+            $user = wp_get_current_user();
+        }
+
+        return in_array($role, $user->roles);
     }
 
     public function IgnoreCronJobs()
@@ -132,6 +163,44 @@ class LkPlatform
         }
 
         return $allcaps;
+    }
+
+    public function RedirectUserSwitch()
+    {
+        if (!$this->UserSwitchRedirected)
+        {
+            add_action('switch_to_user', [$this, '_RedirectSwitchToUser_Action']);
+            add_action('switch_back_user', [$this, '_RedirectSwitchBackUser_Action'], 10, 2);
+            add_filter('login_redirect', [$this, '_RedirectUserSwitch_Filter']);
+            $this->UserSwitchRedirected = true;
+        }
+    }
+
+    public function _RedirectSwitchToUser_Action($user_id)
+    {
+        if ($this->UserHasRole('administrator', $this->GetUser($user_id)))
+        {
+            $this->NextLoginRedirect = admin_url();
+        }
+        else
+        {
+            $this->NextLoginRedirect = home_url();
+        }
+    }
+
+    public function _RedirectSwitchBackUser_Action($user_id, $old_user_id)
+    {
+        $user = $this->GetUser($old_user_id);
+        $this->NextLoginRedirect = self_admin_url("users.php" .
+            ($user && $user->display_name ? "?s=" . urlencode($user->display_name) : ""));
+    }
+
+    public function _RedirectUserSwitch_Filter($redirect_to)
+    {
+        $redirect_to = $this->NextLoginRedirect ?: $redirect_to;
+        $this->NextLoginRedirect = null;
+
+        return $redirect_to;
     }
 }
 
