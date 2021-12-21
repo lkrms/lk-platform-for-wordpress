@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Lkrms\Wp\LkPlatform;
 
+use WP_User;
+
 class LkPlatform
 {
     /**
@@ -21,6 +23,11 @@ class LkPlatform
      */
     private $HiddenPlugins;
 
+    /**
+     * @var bool
+     */
+    private $UserSwitchingLimited = false;
+
     private function __construct()
     {
     }
@@ -28,7 +35,7 @@ class LkPlatform
     /**
      * @return LkPlatform
      */
-    public static function GetInstance()
+    public static function GetInstance(): LkPlatform
     {
         if (!self::$Instance)
         {
@@ -38,7 +45,7 @@ class LkPlatform
         return self::$Instance;
     }
 
-    public function Init()
+    public function Load()
     {
         if (!(defined('WP_CLI') && WP_CLI))
         {
@@ -47,16 +54,32 @@ class LkPlatform
             if (is_admin())
             {
                 $this->HidePlugin(plugin_basename(LKWP_FILE));
+                $this->HidePlugin('user-switching/user-switching.php');
                 $this->HidePlugin('wp-cli-login-server/wp-cli-login-server.php');
             }
+
+            if (is_plugin_active('user-switching/user-switching.php'))
+            {
+                $this->LimitUserSwitching();
+            }
         }
+    }
+
+    public function UserIsVendor(WP_User $user = null): bool
+    {
+        if (is_null($user))
+        {
+            $user = wp_get_current_user();
+        }
+
+        return preg_match(LKWP_VENDOR_EMAIL_REGEX, $user->user_email);
     }
 
     public function IgnoreCronJobs()
     {
         if (!$this->CronJobsIgnored)
         {
-            add_filter('pre_get_ready_cron_jobs', '_IgnoreCronJobs_Filter');
+            add_filter('pre_get_ready_cron_jobs', [$this, '_IgnoreCronJobs_Filter']);
             $this->CronJobsIgnored = true;
         }
     }
@@ -79,9 +102,7 @@ class LkPlatform
 
     public function _HidePlugin_Action()
     {
-        if (preg_match('/' . defined('LKWP_VENDOR_EMAIL_REGEX')
-            ? LKWP_VENDOR_EMAIL_REGEX
-            : '@linacreative\\.com$' . '/', wp_get_current_user()->user_email))
+        if ($this->UserIsVendor())
         {
             return;
         }
@@ -92,6 +113,25 @@ class LkPlatform
         {
             unset($wp_list_table->items[$plugin]);
         }
+    }
+
+    public function LimitUserSwitching()
+    {
+        if (!$this->UserSwitchingLimited)
+        {
+            add_filter('user_has_cap', [$this, '_LimitUserSwitching_Filter'], 9, 4);
+            $this->UserSwitchingLimited = true;
+        }
+    }
+
+    public function _LimitUserSwitching_Filter($allcaps, $caps, $args, $user)
+    {
+        if ('switch_to_user' === $args[0] && !$this->UserIsVendor($user))
+        {
+            $allcaps['switch_users'] = false;
+        }
+
+        return $allcaps;
     }
 }
 

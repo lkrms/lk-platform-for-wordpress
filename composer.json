@@ -3,12 +3,29 @@
     "type": "wordpress-plugin",
     "license": "MIT",
     "description": "lk-platform integration for WordPress",
-    "require": {
-        "composer/installers": "~1.0"
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://wpackagist.org",
+            "only": [
+                "wpackagist-plugin/*",
+                "wpackagist-theme/*"
+            ]
+        }
+    ],
+    "require-dev": {
+        "composer/installers": "^1.0",
+        "johnpbloch/wordpress": "^5.8",
+        "wpackagist-plugin/user-switching": "^1.5",
+        "aaemnnosttv/wp-cli-login-server": "^1.3"
     },
     "autoload": {
         "psr-4": {
             "Lkrms\\Wp\\": "src/"
         }
+    },
+    "extra": {
+        "installer-disable": true,
+        "wordpress-install-dir": "vendor/wordpress/wordpress"
     }
 }

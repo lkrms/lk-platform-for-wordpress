@@ -18,6 +18,11 @@ require __DIR__ . '/vendor/autoload.php';
 
 define('LKWP_FILE', __FILE__);
 
+if (!defined('LKWP_VENDOR_EMAIL_REGEX'))
+{
+    define('LKWP_VENDOR_EMAIL_REGEX', '/@linacreative\\.com$/');
+}
+
 /**
  * @return LkPlatform
  */
@@ -26,4 +31,4 @@ function LKWP()
     return LkPlatform::GetInstance();
 }
 
-LKWP()->Init();
+LKWP()->Load();
