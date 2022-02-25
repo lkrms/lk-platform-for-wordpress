@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Lkrms\Wp\LkPlatform;
 
+use ActionScheduler;
 use UnexpectedValueException;
 use WP_User;
 
@@ -117,8 +118,18 @@ class LkPlatform
     {
         if (!$this->CronJobsIgnored)
         {
+            // Must run after ActionScheduler_QueueRunner::init()
+            add_action('init', '_DisableActionScheduler_Action', 10);
             add_filter('pre_get_ready_cron_jobs', [$this, '_IgnoreCronJobs_Filter']);
             $this->CronJobsIgnored = true;
+        }
+    }
+
+    function _DisableActionScheduler_Action()
+    {
+        if (class_exists(ActionScheduler::class))
+        {
+            remove_action('action_scheduler_run_queue', [ActionScheduler::runner(), 'run']);
         }
     }
 
@@ -210,7 +221,7 @@ class LkPlatform
 
     public function _RedirectUserSwitch_Filter($redirect_to)
     {
-        $redirect_to = $this->NextLoginRedirect ?: $redirect_to;
+        $redirect_to             = $this->NextLoginRedirect ?: $redirect_to;
         $this->NextLoginRedirect = null;
 
         return $redirect_to;
