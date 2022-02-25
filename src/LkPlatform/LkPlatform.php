@@ -50,6 +50,9 @@ class LkPlatform
     }
 
     /**
+     * You're probably looking for 'LKWP()'
+     *
+     * @see LKWP()
      * @return LkPlatform
      */
     public static function GetInstance(): LkPlatform
@@ -62,9 +65,14 @@ class LkPlatform
         return self::$Instance;
     }
 
+    public function CliIsRunning()
+    {
+        return defined('WP_CLI') && WP_CLI;
+    }
+
     public function Load()
     {
-        if (!(defined('WP_CLI') && WP_CLI))
+        if (!$this->CliIsRunning())
         {
             $this->IgnoreCronJobs();
 
@@ -106,7 +114,7 @@ class LkPlatform
 
     public function UserIsVendor($user = null): bool
     {
-        return (bool)preg_match(LKWP_VENDOR_EMAIL_REGEX, $this->GetUser($user)->user_email ?: "");
+        return (bool)preg_match(LKWP_VENDOR_EMAIL_REGEX, (string)$this->GetUser($user)->user_email);
     }
 
     public function UserHasRole(string $role, $user = null): bool
@@ -151,7 +159,7 @@ class LkPlatform
 
     public function _HidePlugin_Action()
     {
-        if ($this->UserIsVendor())
+        if ($this->CliIsRunning() || $this->UserIsVendor())
         {
             return;
         }
