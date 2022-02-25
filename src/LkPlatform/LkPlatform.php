@@ -106,7 +106,7 @@ class LkPlatform
 
     public function UserIsVendor($user = null): bool
     {
-        return (bool)preg_match(LKWP_VENDOR_EMAIL_REGEX, $this->GetUser($user)->user_email);
+        return (bool)preg_match(LKWP_VENDOR_EMAIL_REGEX, $this->GetUser($user)->user_email ?: "");
     }
 
     public function UserHasRole(string $role, $user = null): bool
